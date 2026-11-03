@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>XI-TKJ3 // SMK Muhammadiyah 3 Metro — Network Architecture Class</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0507;
+    --panel:#150b0e;
+    --line:rgba(255,64,64,.28);
+    --line-soft:rgba(255,64,64,.14);
+    --red:#ff3131;
+    --red-2:#ff5b5b;
+    --red-deep:#8b1616;
+    --amber:#ffb020;
+    --text:#f2e9e9;
+    --muted:#b39a9c;
+    --mono:'Share Tech Mono',monospace;
+    --display:'Orbitron',sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth;scroll-padding-top:90px}
+  body{
+    background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(255,49,49,.14), transparent 60%),
+      radial-gradient(900px 500px at 100% 100%, rgba(139,22,22,.14), transparent 55%),
+      var(--bg);
+    color:var(--text);font-family:var(--mono);overflow-x:hidden;
+  }
+  /* grid overlay */
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      linear-gradient(rgba(255,49,49,.05) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,49,49,.05) 1px,transparent 1px);
+    background-size:42px 42px;}
+  /* scanlines */
+  body::after{content:"";position:fixed;inset:0;pointer-events:none;z-index:55;
+    background:repeating-linear-gradient(0deg,rgba(0,0,0,.14) 0 1px,transparent 1px 3px);}
+  canvas#net{position:fixed;inset:0;z-index:-1}
+  ::selection{background:var(--red);color:#140404}
+  ::-webkit-scrollbar{width:10px}
+  ::-webkit-scrollbar-track{background:#0a0507}
+  ::-webkit-scrollbar-thumb{background:var(--red-deep)}
+
+  /* ===== BOOT SCREEN (PEMBUKA) ===== */
+  #boot{position:fixed;inset:0;background:#060203;z-index:100;display:flex;flex-direction:column;
+    justify-content:center;padding:6vw;transition:opacity .7s ease;cursor:pointer}
+  #boot.fade-out{opacity:0;pointer-events:none}
+  .boot-tag{color:var(--amber);letter-spacing:3px;font-size:12px;margin-bottom:18px}
+  #boot-text{color:var(--red-2);font-family:var(--mono);font-size:clamp(13px,1.8vw,17px);
+    line-height:1.9;text-shadow:0 0 8px rgba(255,49,49,.6);white-space:pre-wrap}
+  #boot-text::after{content:"█";animation:blink 1s steps(2) infinite}
+  #boot-grant{margin-top:26px;font-family:var(--display);font-weight:900;
+    font-size:clamp(22px,4.5vw,44px);color:var(--red);letter-spacing:3px;
+    animation:pulseGlow .8s ease infinite alternate}
+  .boot-hint{margin-top:30px;color:#6b5557;font-size:12px;letter-spacing:2px}
+  .hidden{display:none}
+  @keyframes blink{50%{opacity:0}}
+  @keyframes pulseGlow{from{text-shadow:0 0 8px rgba(255,49,49,.5)}to{text-shadow:0 0 32px rgba(255,49,49,1)}}
+
+  /* ===== NAVBAR ===== */
+  nav{position:fixed;top:0;left:0;right:0;z-index:60;display:flex;align-items:center;
+    justify-content:space-between;gap:14px;padding:14px 5vw;
+    background:rgba(10,5,7,.78);backdrop-filter:blur(10px);border-bottom:1px solid var(--line-soft)}
+  .brand{color:var(--red-2);font-weight:bold;letter-spacing:1px;font-size:15px;white-space:nowrap}
+  nav ul{display:flex;gap:4px;list-style:none;flex-wrap:wrap}
+  nav a{color:var(--muted);text-decoration:none;padding:6px 10px;font-size:13px;transition:.25s;border:1px solid transparent}
+  nav a:hover{color:var(--red-2);border-color:var(--line);background:rgba(255,49,49,.07);text-shadow:0 0 8px rgba(255,49,49,.7)}
+
+  /* ===== HERO ===== */
+  header{min-height:100vh;display:flex;flex-direction:column;justify-content:center;
+    padding:130px 6vw 60px;position:relative;z-index:1}
+  .badge{display:inline-flex;align-items:center;gap:9px;border:1px solid var(--line);padding:8px 15px;
+    width:max-content;background:rgba(255,49,49,.06);letter-spacing:2px;color:var(--red-2);font-size:13px}
+  .dot{width:9px;height:9px;border-radius:50%;background:var(--red);box-shadow:0 0 10px var(--red);animation:blink 1.4s infinite}
+  .hostname{margin-top:16px;color:var(--muted);font-size:13px;letter-spacing:1px}
+  .hostname b{color:var(--amber)}
+  h1.glitch{font-family:var(--display);font-weight:900;font-size:clamp(34px,7vw,84px);line-height:1.05;
+    margin:18px 0 10px;letter-spacing:2px;color:#fff;text-shadow:0 0 30px rgba(255,49,49,.45);position:relative;display:inline-block}
+  .glitch::before,.glitch::after{content:attr(data-text);position:absolute;left:0;top:0;width:100%;pointer-events:none}
+  .glitch::before{color:var(--red-2);z-index:-1;animation:glitchA 3.2s infinite linear alternate-reverse}
+  .glitch::after{color:#ff8080;z-index:-2;animation:glitchB 2.7s infinite linear alternate-reverse}
+  @keyframes glitchA{0%,100%{clip-path:inset(0 0 62% 0);transform:translate(-3px,-2px)}20%{clip-path:inset(28% 0 40% 0);transform:translate(3px,1px)}
+    40%{clip-path:inset(70% 0 5% 0);transform:translate(-2px,2px)}60%{clip-path:inset(10% 0 75% 0);transform:translate(2px,-1px)}80%{clip-path:inset(50% 0 30% 0);transform:translate(-3px,1px)}}
+  @keyframes glitchB{0%,100%{clip-path:inset(65% 0 8% 0);transform:translate(3px,1px)}25%{clip-path:inset(15% 0 70% 0);transform:translate(-3px,0)}
+    50%{clip-path:inset(45% 0 35% 0);transform:translate(2px,2px)}75%{clip-path:inset(80% 0 2% 0);transform:translate(-2px,-2px)}}
+  .sub{font-family:var(--display);font-weight:700;font-size:clamp(13px,2.3vw,22px);color:var(--red-2);letter-spacing:7px;margin-bottom:22px}
+  .typed{min-height:1.7em;color:var(--text);font-size:clamp(14px,1.9vw,19px)}
+  .typed::after{content:"▌";color:var(--red);animation:blink 1s steps(2) infinite}
+  .desc{max-width:720px;color:var(--muted);line-height:1.9;margin-top:14px;font-size:15px}
+  .cta{display:flex;gap:14px;margin-top:30px;flex-wrap:wrap}
+  .btn{border:1px solid var(--line);padding:13px 24px;color:var(--text);text-decoration:none;
+    letter-spacing:1px;background:rgba(255,49,49,.05);transition:.25s;font-size:14px}
+  .btn:hover{background:var(--red);color:#140404;box-shadow:0 0 26px rgba(255,49,49,.55);border-color:var(--red)}
+  .btn.ghost{background:transparent}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line-soft);
+    border:1px solid var(--line-soft);margin-top:56px}
+  .stat{background:rgba(10,5,7,.85);padding:18px;text-align:center}
+  .stat b{display:block;font-family:var(--display);color:var(--red-2);font-size:clamp(15px,2.4vw,25px)}
+  .stat span{color:var(--muted);font-size:11px;letter-spacing:2px}
+  @media(max-width:640px){.stats{grid-template-columns:repeat(2,1fr)}}
+
+  /* ===== SECTION SHELL ===== */
+  section{padding:90px 6vw;max-width:1200px;margin:0 auto;position:relative;z-index:1}
+  .term-head{display:flex;align-items:center;gap:8px;border:1px solid var(--line-soft);
+    background:var(--panel);padding:10px 14px;border-bottom:none}
+  .tdot{width:10px;height:10px;border-radius:50%}
+  .tdot.r{background:#ff5f56}.tdot.a{background:#ffbd2e}.tdot.g{background:#27c93f}
+  .term-title{margin-left:8px;color:var(--muted);font-size:13px}
+  .term-body{border:1px solid var(--line-soft);background:rgba(10,5,7,.82);padding:30px}
+  h2{font-family:var(--display);font-size:clamp(19px,3vw,30px);color:#fff;letter-spacing:1px;margin-bottom:8px}
+  h2 em{color:var(--red-2);font-style:normal}
+  .sec-desc{color:var(--muted);margin-bottom:26px;font-size:14px;line-height:1.8}
+  .note{margin-top:20px;color:#7a5f61;font-size:12px}
+
+  /* ===== NODE LIST ===== */
+  .node-row{display:grid;grid-template-columns:110px 1fr 200px 110px;gap:12px;padding:15px 10px;
+    border-bottom:1px dashed var(--line-soft);align-items:center;font-size:14px}
+  .node-row:last-child{border-bottom:none}
+  .node-id{color:var(--red-2)}
+  .node-role{color:var(--muted)}
+  .node-status{text-align:right;font-size:12px;letter-spacing:1px}
+  .on{color:#ff6b6b;text-shadow:0 0 8px rgba(255,49,49,.6)}
+  .off{color:#6b5557}
+  .node-row.ghost{opacity:.4}
+  @media(max-width:720px){.node-row{grid-template-columns:90px 1fr 90px}.node-role{display:none}}
+
+  /* ===== SPEC CARDS ===== */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:22px}
+  .spec-card{position:relative;overflow:hidden;border:1px solid var(--line-soft);background:linear-gradient(180deg,#170d10,#120a0c);
+    padding:26px 24px;transition:.35s}
+  .spec-card::before{content:"";position:absolute;inset:0;pointer-events:none;
+    background:
+      linear-gradient(var(--red),var(--red)) left top,linear-gradient(var(--red),var(--red)) left top,
+      linear-gradient(var(--red),var(--red)) right top,linear-gradient(var(--red),var(--red)) right top,
+      linear-gradient(var(--red),var(--red)) left bottom,linear-gradient(var(--red),var(--red)) left bottom,
+      linear-gradient(var(--red),var(--red)) right bottom,linear-gradient(var(--red),var(--red)) right bottom;
+    background-repeat:no-repeat;
+    background-size:16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px,16px 2px,2px 16px;opacity:.75}
+  .spec-card::after{content:"";position:absolute;left:0;right:0;top:-60%;height:45%;
+    background:linear-gradient(180deg,transparent,rgba(255,49,49,.09),transparent);
+    transform:skewY(-4deg);transition:top .9s ease}
+  .spec-card:hover::after{top:120%}
+  .spec-card:hover{transform:translateY(-7px);border-color:var(--red);
+    box-shadow:0 20px 50px -12px rgba(255,49,49,.35)}
+  .card-top{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .node-tag{color:var(--red-2);letter-spacing:2px;font-size:13px}
+  .chip{font-size:10.5px;letter-spacing:1px;padding:5px 10px;border:1px solid}
+  .chip-red{color:#ffb3b3;border-color:rgba(255,49,49,.6);background:rgba(255,49,49,.12);text-shadow:0 0 6px rgba(255,49,49,.6)}
+  .chip-amber{color:#ffd9a0;border-color:rgba(255,176,32,.55);background:rgba(255,176,32,.1)}
+  .chip-crimson{color:#f3c4c4;border-color:var(--red-deep);background:rgba(139,22,22,.28)}
+  .spec-card h3{font-family:var(--display);font-size:18px;color:#fff;margin-bottom:6px;letter-spacing:.5px}
+  .spec{color:var(--amber);font-size:12.5px;letter-spacing:.5px;margin-bottom:14px}
+  .desc2{color:var(--muted);font-size:13.5px;line-height:1.8;margin-bottom:18px}
+  .bar{display:grid;grid-template-columns:110px 1fr 44px;align-items:center;gap:10px;font-size:11.5px;color:var(--muted);margin-top:10px}
+  .track{height:8px;background:rgba(255,255,255,.06);border:1px solid var(--line-soft)}
+  .bar-fill{height:100%;width:0;background:linear-gradient(90deg,var(--red-deep),var(--red));
+    box-shadow:0 0 12px rgba(255,49,49,.6);transition:width 1.4s cubic-bezier(.2,.7,.2,1)}
+  .bar b{color:var(--red-2);text-align:right}
+  .card-foot{margin-top:18px;padding-top:14px;border-top:1px dashed var(--line-soft);color:#7a5f61;font-size:11.5px;letter-spacing:1px}
+  .cards .reveal:nth-child(2){transition-delay:.15s}
+  .cards .reveal:nth-child(3){transition-delay:.3s}
+
+  /* ===== GALLERY ===== */
+  .gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:18px}
+  .shot{border:1px solid var(--line-soft);background:var(--panel);padding:10px;transition:.3s}
+  .shot:hover{border-color:var(--red);box-shadow:0 12px 40px -14px rgba(255,49,49,.4);transform:translateY(-4px)}
+  .frame{aspect-ratio:16/10;display:grid;place-items:center;border:1px dashed var(--line);
+    color:#7a5f61;font-size:13px;letter-spacing:3px;
+    background:repeating-linear-gradient(45deg,rgba(255,49,49,.04) 0 12px,transparent 12px 24px)}
+  figcaption{margin-top:10px;color:var(--muted);font-size:12px}
+
+  /* ===== FOOTER ===== */
+  footer{border-top:1px solid var(--line-soft);padding:44px 6vw;text-align:center;color:var(--muted);font-size:13px;position:relative;z-index:1}
+  footer pre{color:var(--red-2);text-shadow:0 0 10px rgba(255,49,49,.5);font-size:12px;line-height:1.5;margin-bottom:14px}
+
+  .reveal{opacity:0;transform:translateY(26px);transition:opacity .8s ease,transform .8s cubic-bezier(.2,.7,.2,1)}
+  .reveal.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<canvas id="net"></canvas>
+
+<!-- ================= PEMBUKA / BOOT SEQUENCE ================= -->
+<div id="boot">
+  <div class="boot-tag">SMK MUHAMMADIYAH 3 METRO // SECURE TERMINAL v3.1.4</div>
+  <pre id="boot-text"></pre>
+  <div id="boot-grant" class="hidden">[ ACCESS GRANTED ]</div>
+  <div class="boot-hint">KLIK DI MANA SAJA UNTUK MELEWATI ▸</div>
+</div>
+
+<!-- ================= NAVBAR ================= -->
+<nav>
+  <div class="brand">root@XI-TKJ3:~$</div>
+  <ul>
+    <li><a href="#home">[01_HOME]</a></li>
+    <li><a href="#nodes">[02_CLASS_NODES]</a></li>
+    <li><a href="#top">[03_TOP_BANDWIDTH]</a></li>
+    <li><a href="#logs">[04_NETWORK_LOGS]</a></li>
+  </ul>
+</nav>
+
+<!-- ================= HERO ================= -->
+<header id="home">
+  <div class="badge"><span class="dot"></span> SYSTEM STATUS: ONLINE</div>
+  <p class="hostname">HOSTNAME: <b>XI-TKJ3.SMKM3METRO.SCH.ID</b> &nbsp;|&nbsp; IP: 192.168.3.1/24 &nbsp;|&nbsp; UPLINK: STABLE</p>
+  <h1 class="glitch" data-text="CLASS XI TKJ 3">CLASS XI TKJ 3</h1>
+  <p class="sub">— NETWORK ARCHITECTURE CLASS —</p>
+  <p class="typed" id="typed"></p>
+  <p class="desc">Portal resmi kelas XI Teknik Komputer dan Jaringan 3 SMK Muhammadiyah 3 Metro.
+  Pusat informasi kegiatan, struktur node jaringan kelas, serta rekam jejak prestasi siswa.
+  Dari sini, setiap paket data ilmu dirouting menuju masa depan.</p>
+  <div class="cta">
+    <a class="btn" href="#top">▶ BUKA TOP_BANDWIDTH</a>
+    <a class="btn ghost" href="#nodes">▸ LIHAT CLASS_NODES</a>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="uptime">00:00:00</b><span>SYSTEM UPTIME</span></div>
+    <div class="stat"><b>03 / 36</b><span>NODE TERDAFTAR</span></div>
+    <div class="stat"><b id="ping">1.0ms</b><span>AVG LATENCY</span></div>
+    <div class="stat"><b id="pkt">0</b><span>PACKETS TRANSFERRED</span></div>
+  </div>
+</header>
+
+<!-- ================= [02] CLASS_NODES ================= -->
+<section id="nodes">
+  <div class="term-head">
+    <span class="tdot r"></span><span class="tdot a"></span><span class="tdot g"></span>
+    <span class="term-title">root@xi-tkj3:~$ cat /etc/class/nodes.list</span>
+  </div>
+  <div class="term-body">
+    <h2>[02] CLASS_NODES <em>— DAFTAR SISWA</em></h2>
+    <p class="sec-desc">Setiap siswa adalah sebuah node. Bersama-sama kami membangun satu topologi bernama XI TKJ 3.</p>
+    <div class="node-list">
+      <!-- UNTUK MENAMBAH SISWA: copy 1 blok .node-row di bawah ini lalu ganti datanya -->
+      <div class="node-row">
+        <span class="node-id">[NODE_01]</span>
+        <span class="node-name">Muhammad Dzikri Al Habsyi</span>
+        <span class="node-role">ITNSA / SysAdmin</span>
+        <span class="node-status on">● ONLINE</span>
+      </div>
+      <div class="node-row">
+        <span class="node-id">[NODE_02]</span>
+        <span class="node-name">Muhammad Fachri Akbar</span>
+        <span class="node-role">Multimedia / Editing</span>
+        <span class="node-status on">● ONLINE</span>
+      </div>
+      <div class="node-row">
+        <span class="node-id">[NODE_03]</span>
+        <span class="node-name">Firdaus Permana Adi Guna</span>
+        <span class="node-role">Pencak Silat</span>
+        <span class="node-status on">● ONLINE</span>
+      </div>
+      <div class="node-row ghost">
+        <span class="node-id">[NODE_04]</span>
+        <span class="node-name">awaiting_connection...</span>
+        <span class="node-role">—</span>
+        <span class="node-status off">○ OFFLINE</span>
+      </div>
+      <div class="node-row ghost">
+        <span class="node-id">[NODE_05]</span>
+        <span class="node-name">awaiting_connection...</span>
+        <span class="node-role">—</span>
+        <span class="node-status off">○ OFFLINE</span>
+      </div>
+    </div>
+    <p class="note">// Tambahkan node baru dengan menyalin satu blok .node-row pada file ini.</p>
+  </div>
+</section>
+
+<!-- ================= [03] TOP_BANDWIDTH ================= -->
+<section id="top">
+  <div class="term-head">
+    <span class="tdot r"></span><span class="tdot a"></span><span class="tdot g"></span>
+    <span class="term-title">root@xi-tkj3:~$ ./top_bandwidth --sort=prestasi --limit=3</span>
+  </div>
+  <div class="term-body">
+    <h2>[03] TOP_BANDWIDTH <em>— HALL OF FAME</em></h2>
+    <p class="sec-desc">Tiga node dengan throughput tertinggi. Kecepatan luar biasa, stabilitas teruji.</p>
+
+    <div class="cards">
+      <!-- NODE 01 -->
+      <article class="spec-card reveal">
+        <div class="card-top">
+          <span class="node-tag">NODE_01</span>
+          <span class="chip chip-red">HIGH PERFORMANCE NODE</span>
+        </div>
+        <h3>Muhammad Dzikri Al Habsyi</h3>
+        <p class="spec">SPEC : IT Network Systems Administration (ITNSA)</p>
+        <p class="desc2">Unggul dalam konfigurasi jaringan, routing, switching, serta administrasi server.
+        Memiliki ketelitian tinggi dalam mendesain infrastruktur jaringan skala industri
+        dan pemecahan masalah (troubleshooting) sistem.</p>
+        <div class="bar"><span>ROUTING</span><div class="track"><div class="bar-fill" data-val="96"></div></div><b>96%</b></div>
+        <div class="bar"><span>SWITCHING</span><div class="track"><div class="bar-fill" data-val="93"></div></div><b>93%</b></div>
+        <div class="bar"><span>SERVER ADMIN</span><div class="track"><div class="bar-fill" data-val="97"></div></div><b>97%</b></div>
+        <div class="card-foot">UPTIME: 99.98% • LATENCY: LOW • CORE: 8</div>
+      </article>
+
+      <!-- NODE 02 -->
+      <article class="spec-card reveal">
+        <div class="card-top">
+          <span class="node-tag">NODE_02</span>
+          <span class="chip chip-amber">CREATIVE PROCESSING UNIT</span>
+        </div>
+        <h3>Muhammad Fachri Akbar</h3>
+        <p class="spec">SPEC : Digital Content & Video Editing</p>
+        <p class="desc2">Ahli dalam mengolah media visual, editing video, dan desain grafis.
+        Mengombinasikan kreativitas seni visual dengan teknis multimedia untuk
+        menghasilkan konten digital kelas yang komunikatif dan estetis.</p>
+        <div class="bar"><span>VIDEO EDITING</span><div class="track"><div class="bar-fill" data-val="96"></div></div><b>96%</b></div>
+        <div class="bar"><span>DESIGN GRAFIS</span><div class="track"><div class="bar-fill" data-val="92"></div></div><b>92%</b></div>
+        <div class="bar"><span>STORYTELLING</span><div class="track"><div class="bar-fill" data-val="90"></div></div><b>90%</b></div>
+        <div class="card-foot">RENDER: GPU ACCEL • OUTPUT: 4K • VIBES: MAX</div>
+      </article>
+
+      <!-- NODE 03 -->
+      <article class="spec-card reveal">
+        <div class="card-top">
+          <span class="node-tag">NODE_03</span>
+          <span class="chip chip-crimson">PHYSICAL SECURITY & AGILITY</span>
+        </div>
+        <h3>Firdaus Permana Adi Guna</h3>
+        <p class="spec">SPEC : Pencak Silat (Seni Bela Diri)</p>
+        <p class="desc2">Berprestasi di cabang olahraga seni bela diri Pencak Silat.
+        Menunjukkan disiplin tinggi, ketangkasan fisik, serta jiwa sportif yang
+        mengharumkan nama kelas XI TKJ 3 dan sekolah di tingkat kejuaraan.</p>
+        <div class="bar"><span>KEKUATAN</span><div class="track"><div class="bar-fill" data-val="94"></div></div><b>94%</b></div>
+        <div class="bar"><span>KELINCAHAN</span><div class="track"><div class="bar-fill" data-val="97"></div></div><b>97%</b></div>
+        <div class="bar"><span>DISIPLIN</span><div class="track"><div class="bar-fill" data-val="98"></div></div><b>98%</b></div>
+        <div class="card-foot">FIREWALL: FISIK • THREAT BLOCKED: 100%</div>
+      </article>
+    </div>
+  </div>
+</section>
+
+<!-- ================= [04] NETWORK_LOGS ================= -->
+<section id="logs">
+  <div class="term-head">
+    <span class="tdot r"></span><span class="tdot a"></span><span class="tdot g"></span>
+    <span class="term-title">root@xi-tkj3:~$ ls -la /var/log/kegiatan/</span>
+  </div>
+  <div class="term-body">
+    <h2>[04] NETWORK_LOGS <em>— GALERI & KEGIATAN</em></h2>
+    <p class="sec-desc">Rekaman aktivitas yang pernah melewati jaringan kelas ini.</p>
+
+    <div class="gallery">
+      <!-- GANTI ISI .frame DENGAN <img src="foto.jpg" style="width:100%;height:100%;object-fit:cover"> -->
+      <figure class="shot reveal">
+        <div class="frame">[ NO_SIGNAL ]</div>
+        <figcaption>[LOG_001] Kegiatan kelas — segera diunggah_</figcaption>
+      </figure>
+      <figure class="shot reveal">
+        <div class="frame">[ NO_SIGNAL ]</div>
+        <figcaption>[LOG_002] Praktik jaringan — segera diunggah_</figcaption>
+      </figure>
+      <figure class="shot reveal">
+        <div class="frame">[ NO_SIGNAL ]</div>
+        <figcaption>[LOG_003] Prestasi & lomba — segera diunggah_</figcaption>
+      </figure>
+      <figure class="shot reveal">
+        <div class="frame">[ NO_SIGNAL ]</div>
+        <figcaption>[LOG_004] Dokumentasi — segera diunggah_</figcaption>
+      </figure>
+    </div>
+  </div>
+</section>
+
+<!-- ================= FOOTER ================= -->
+<footer>
+<pre>
+   ┌──────────┐
+──▶│ XI-TKJ3  │──▶ CONNECTING KNOWLEDGE ──▶ ROUTING SUCCESS
+   └──────────┘        PACKET BY PACKET
+</pre>
+  <p>© 2025 CLASS XI TKJ 3 — SMK MUHAMMADIYAH 3 METRO</p>
+  <p style="margin-top:6px;color:#7a5f61">ALL SYSTEMS OPERATIONAL • BUILT WITH ❤ & RED PACKETS</p>
+</footer>
+
+<script>
+/* ================== BOOT SEQUENCE ================== */
+const bootScreen = document.getElementById('boot');
+const bootEl     = document.getElementById('boot-text');
+const grantEl    = document.getElementById('boot-grant');
+let skipBoot = false;
+bootScreen.addEventListener('click', () => skipBoot = true);
+
+const sleep = ms => new Promise(r => skipBoot ? r() : setTimeout(r, ms));
+
+const bootLines = [
+  "[ OK ] INITIALIZING KERNEL class11_tkj3.img ...",
+  "[ OK ] LOADING MODULE: network.drv",
+  "[ OK ] LOADING MODULE: knowledge.sys",
+  "[ OK ] LOADING MODULE: prestasi.exe",
+  "[ OK ] MOUNTING /smk/muhammadiyah3/metro/xi_tkj3 ... DONE",
+  "[ OK ] ESTABLISHING UPLINK → 192.168.3.1 ... TTL=63",
+  "[ OK ] INJECTING SEMANGAT BELAJAR ... 100%",
+  "[ >> ] AUTHENTICATING GUEST SESSION ..."
+];
+
+async function runBoot(){
+  for(const line of bootLines){
+    for(const ch of line){
+      bootEl.textContent += ch;
+      await sleep(9);
+    }
+    bootEl.textContent += "\n";
+    await sleep(140);
+  }
+  await sleep(250);
+  grantEl.classList.remove('hidden');
+  bootEl.textContent += "\n> WELCOME TO XI-TKJ3 SECURE TERMINAL\n";
+  await sleep(1200);
+  bootScreen.classList.add('fade-out');
+  await sleep(700);
+  bootScreen.style.display = 'none';
+  skipBoot = false;           // supaya animasi lain jalan normal lagi
+  typeLoop();                 // mulai animasi slogan
+}
+runBoot();
+
+/* ================== TYPED SLOGAN ================== */
+const phrases = [
+  '"Connecting Knowledge, Routing Success, Packet by Packet."',
+  'if (kerja_keras && doa) { output = PRESTASI; }',
+  'ping prestasi.smkm3metro.sch.id → REPLY: TIME=1ms ✓'
+];
+async function typeLoop(){
+  const el = document.getElementById('typed');
+  let p = 0;
+  while(true){
+    const text = phrases[p % phrases.length];
+    for(let i=1;i<=text.length;i++){ el.textContent = text.slice(0,i); await sleep(38); }
+    await sleep(2000);
+    for(let i=text.length;i>=0;i--){ el.textContent = text.slice(0,i); await sleep(13); }
+    await sleep(400);
+    p++;
+  }
+}
+
+/* ================== BACKGROUND JARINGAN (CANVAS) ================== */
+const canvas = document.getElementById('net');
+const ctx = canvas.getContext('2d');
+let W, H, nodes = [];
+
+function resize(){
+  W = canvas.width  = innerWidth;
+  H = canvas.height = innerHeight;
+  const count = Math.min(85, Math.floor(W*H/18000));
+  nodes = Array.from({length:count}, () => ({
+    x: Math.random()*W, y: Math.random()*H,
+    vx:(Math.random()-.5)*.6, vy:(Math.random()-.5)*.6,
+    r: Math.random()*1.8+.6
+  }));
+}
+resize();
+addEventListener('resize', resize);
+
+function step(){
+  ctx.clearRect(0,0,W,H);
+  for(const n of nodes){
+    n.x+=n.vx; n.y+=n.vy;
+    if(n.x<0||n.x>W) n.vx*=-1;
+    if(n.y<0||n.y>H) n.vy*=-1;
+  }
+  for(let i=0;i<nodes.length;i++){
+    for(let j=i+1;j<nodes.length;j++){
+      const dx=nodes[i].x-nodes[j].x, dy=nodes[i].y-nodes[j].y, d=dx*dx+dy*dy;
+      if(d<16000){
+        ctx.strokeStyle = `rgba(255,49,49,${(1-d/16000)*.32})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(nodes[i].x,nodes[i].y);
+        ctx.lineTo(nodes[j].x,nodes[j].y);
+        ctx.stroke();
+      }
+    }
+  }
+  ctx.fillStyle = 'rgba(255,77,77,.85)';
+  for(const n of nodes){
+    ctx.beginPath(); ctx.arc(n.x,n.y,n.r,0,Math.PI*2); ctx.fill();
+  }
+  requestAnimationFrame(step);
+}
+step();
+
+/* ================== ANIMASI SCROLL (REVEAL + BAR) ================== */
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if(e.isIntersecting){
+      e.target.classList.add('show');
+      if(e.target.classList.contains('bar-fill'))
+        e.target.style.width = e.target.dataset.val + '%';
+      io.unobserve(e.target);
+    }
+  });
+},{threshold:.15});
+document.querySelectorAll('.reveal, .bar-fill').forEach(el => io.observe(el));
+
+/* ================== UPTIME / PING / PACKETS ================== */
+let up = 0;
+setInterval(() => {
+  up++;
+  const h=String(Math.floor(up/3600)).padStart(2,'0');
+  const m=String(Math.floor(up%3600/60)).padStart(2,'0');
+  const s=String(up%60).padStart(2,'0');
+  document.getElementById('uptime').textContent = `${h}:${m}:${s}`;
+},1000);
+
+setInterval(() => {
+  document.getElementById('ping').textContent = (Math.random()*3+.4).toFixed(1)+'ms';
+},2000);
+
+let packets = 1843200;
+document.getElementById('pkt').textContent = packets.toLocaleString('id-ID');
+setInterval(() => {
+  packets += Math.floor(Math.random()*900+100);
+  document.getElementById('pkt').textContent = packets.toLocaleString('id-ID');
+},800);
+</script>
+</body>
+</html>
